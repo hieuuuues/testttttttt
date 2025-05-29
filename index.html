@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Lex - Học Từ Vựng Thông Minh</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #60a5fa;
+        --secondary-color: #2563eb;
+        --background: #f0f4f8;
+        --card-bg: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --shadow: 0 6px 25px rgba(0, 0, 0, 0.06);
+        --sidebar-width: 250px;
+        --sidebar-collapsed-width: 60px;
+        --glow: 0 0 20px rgba(37, 99, 235, 0.5);
+        --highlight-color: #f59e0b; /* Màu vàng cho ngôi sao */
+      }
+
+      /* Các style hiện có giữ nguyên, chỉ thêm style cho ngôi sao */
+      .pricing-card ul li.highlight::before,
+      .popup ul li.highlight::before {
+        content: "\f005"; /* Biểu tượng ngôi sao (fa-star) */
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        color: var(--highlight-color);
+        position: absolute;
+        left: 0;
+        font-size: 1.1rem;
+        top: 0.2rem;
+        animation: starPulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes starPulse {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.8;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* Đảm bảo các mục không highlight vẫn dùng biểu tượng check */
+      .pricing-card ul li:not(.highlight)::before,
+      .popup ul li:not(.highlight)::before {
+        content: "\f058"; /* Biểu tượng check */
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        color: var(--primary-color);
+        position: absolute;
+        left: 0;
+        font-size: 1.1rem;
+        top: 0.2rem;
+      }
+
+      .pricing-card:nth-child(4) ul li:not(.highlight)::before {
+        color: var(--secondary-color);
+      }
+
+      /* Các style còn lại giữ nguyên từ mã gốc */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        font-family: "Poppins", sans-serif;
+      }
+
+      body {
+        background: var(--background);
+        color: var(--text-primary);
+        line-height: 1.6;
+        overflow-x: hidden;
+        position: relative;
+      }
+
+      @media (min-width: 769px) {
+        body {
+          padding-left: var(--sidebar-collapsed-width);
+        }
+      }
+
+      .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 999;
+        transition: opacity 0.3s ease;
+      }
+
+      .sidebar.expanded ~ .overlay,
+      .overlay.active {
+        display: block;
+        opacity: 1;
+      }
+
+      .mobile-header {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: var(--card-bg);
+        box-shadow: var(--shadow);
+        z-index: 1200;
+        padding: 0 1rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .mobile-header .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+
+      .mobile-header .logo img {
+        width: 32px;
+        flex-shrink: 0;
+      }
+
+      .mobile-header .logo-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--sidebar-collapsed-width);
+        height: 100vh;
+        background: var(--card-bg);
+        box-shadow: var(--shadow);
+        transition: all 0.3s ease;
+        will-change: width, transform;
+        z-index: 1000;
+        padding: 1rem 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar.expanded {
+        width: var(--sidebar-width);
+        z-index: 1001;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      }
+
+      @media (min-width: 769px) {
+        .sidebar:hover {
+          width: var(--sidebar-width);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+      }
+
+      .sidebar .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
+        min-height: 50px;
+        position: relative;
+      }
+
+      .sidebar .logo img {
+        width: 32px;
+        flex-shrink: 0;
+      }
+
+      .sidebar .logo-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+        white-space: nowrap;
+      }
+
+      .sidebar.expanded .logo-text,
+      .sidebar:hover .logo-text {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .toggle-btn {
+        display: none;
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease;
+      }
+
+      .toggle-btn i {
+        color: var(--card-bg);
+        font-size: 1.2rem;
+      }
+
+      .sidebar.expanded .toggle-btn {
+        transform: rotate(90deg);
+      }
+
+      @media (max-width: 768px) {
+        .mobile-header {
+          display: flex;
+        }
+        .toggle-btn {
+          display: flex;
+        }
+        body {
+          padding-left: 0;
+          padding-top: 60px;
+        }
+        .sidebar {
+          left: calc(var(--sidebar-width) * -1);
+          width: var(--sidebar-width);
+          transition: left 0.3s ease;
+          top: 60px;
+          height: calc(100vh - 60px);
+        }
+        .sidebar.expanded {
+          left: 0;
+        }
+        .sidebar .logo {
+          display: none;
+        }
+      }
+
+      .sidebar-menu {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .sidebar-menu a,
+      .sidebar-menu .sidebar-cta {
+        text-decoration: none;
+        color: var(--text-primary);
+        font-weight: 400;
+        font-size: 0.95rem;
+        padding: 0.7rem 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        border-radius: 8px;
+        transition: background 0.3s, color 0.3s;
+        margin: 0 0.4rem;
+        white-space: nowrap;
+      }
+
+      .sidebar-menu a i,
+      .sidebar-menu .sidebar-cta i {
+        font-size: 1.1rem;
+        color: var(--primary-color);
+        width: 20px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+
+      .sidebar-menu a:hover,
+      .sidebar-menu .sidebar-cta:hover {
+        background: var(--primary-color);
+        color: var(--card-bg);
+      }
+
+      .sidebar-menu a:hover i,
+      .sidebar-menu .sidebar-cta:hover i {
+        color: var(--card-bg);
+      }
+
+      .sidebar:not(.expanded) .sidebar-menu a span,
+      .sidebar:not(.expanded) .sidebar-cta span {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-10px);
+        transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+      }
+
+      .sidebar.expanded .sidebar-menu a span,
+      .sidebar.expanded .sidebar-cta span,
+      .sidebar:hover .sidebar-menu a span,
+      .sidebar:hover .sidebar-cta span {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+      }
+
+      .sidebar-cta {
+        background: var(--primary-color);
+        color: var(--card-bg);
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .user-info {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.8rem;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .user-info img {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+
+      .user-info span {
+        font-size: 0.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .logout-btn {
+        background: var(--secondary-color);
+        color: var(--card-bg);
+        padding: 0.5rem 0.8rem;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+
+      .logout-btn:hover {
+        background: #1e40af;
+      }
+
+      .user-progress {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .custom-data-section {
+        margin-top: 0.8rem;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-10px);
+        transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+      }
+
+      .sidebar.expanded .custom-data-section,
+      .sidebar:hover .custom-data-section {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+      }
+
+      .custom-data-section input {
+        padding: 0.4rem;
+        border: 1px solid var(--primary-color);
+        border-radius: 5px;
+        width: 100%;
+        margin-bottom: 0.4rem;
+        font-size: 0.9rem;
+      }
+
+      .custom-data-section button {
+        padding: 0.4rem 0.8rem;
+        background: var(--primary-color);
+        color: var(--card-bg);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 0.9rem;
+      }
+
+      .custom-data-section button:hover {
+        background: var(--secondary-color);
+      }
+
+      .custom-data-section ul {
+        list-style: none;
+        margin-top: 0.4rem;
+      }
+
+      .custom-data-section li {
+        padding: 0.4rem;
+        background: var(--card-bg);
+        border-radius: 5px;
+        margin-bottom: 0.4rem;
+        box-shadow: var(--shadow);
+        font-size: 0.85rem;
+        white-space: nowrap;
+      }
+
+      .hero {
+        max-width: 1400px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      .hero-text h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+      }
+
+      .hero-text p {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        max-width: 500px;
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .btn {
+        padding: 0.7rem 2rem;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s;
+        font-size: 0.95rem;
+      }
+
+      .btn-primary {
+        background: var(--primary-color);
+        color: var(--card-bg);
+      }
+
+      .btn-primary:hover {
+        background: var(--secondary-color);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+      }
+
+      .btn-secondary:hover {
+        background: var(--primary-color);
+        color: var(--card-bg);
+      }
+
+      .hero-image img {
+        width: 100%;
+        border-radius: 15px;
+        box-shadow: var(--shadow);
+      }
+
+      .vocab-trial {
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+        max-width: 400px;
+      }
+
+      .vocab-trial h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+      }
+
+      .vocab-trial input {
+        width: 65%;
+        padding: 0.6rem;
+        border: 1px solid var(--primary-color);
+        border-radius: 8px 0 0 8px;
+        font-size: 0.9rem;
+        outline: none;
+      }
+
+      .vocab-trial button {
+        padding: 0.6rem 1rem;
+        border: none;
+        background: var(--primary-color);
+        color: var(--card-bg);
+        border-radius: 0 8px 8px 0;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s;
+        font-size: 0.9rem;
+      }
+
+      .vocab-trial button:hover {
+        background: var(--secondary-color);
+      }
+
+      .section {
+        max-width: 1400px;
+        margin: 4rem auto;
+        padding: 0 1rem;
+      }
+
+      .section h2 {
+        font-size: 2.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      .section p.subtitle {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 2rem;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .feature-card {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .feature-card i {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+      }
+
+      .feature-card h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+      }
+
+      .feature-card p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+      }
+
+      .roadmap-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        justify-content: center;
+      }
+
+      .roadmap-item {
+        flex: 1 1 300px;
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: var(--shadow);
+        position: relative;
+      }
+
+      .roadmap-item::before {
+        content: "";
+        position: absolute;
+        top: 20px;
+        left: -12px;
+        width: 20px;
+        height: 20px;
+        background: var(--primary-color);
+        border-radius: 50%;
+      }
+
+      .roadmap-item h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+      }
+
+      .progress-demo {
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .progress-demo img {
+        max-width: 100%;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+      }
+
+      .testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .testimonial-card {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: var(--shadow);
+      }
+
+      .testimonial-card p {
+        font-style: italic;
+        color: var(--text-secondary);
+        margin-bottom: 0.8rem;
+        font-size: 0.95rem;
+      }
+
+      .testimonial-card h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+
+      .pricing-section {
+        max-width: 1200px;
+        margin: 4rem auto;
+        text-align: center;
+        padding: 2rem 1rem;
+      }
+
+      .pricing-section h2 {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        letter-spacing: 0.5px;
+      }
+
+      .pricing-section p.subtitle {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        margin-bottom: 4rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.8;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 2rem;
+        padding: 0 1rem;
+      }
+
+      .pricing-card {
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 25px;
+        box-shadow: var(--shadow);
+        text-align: center;
+        transition: transform 0.4s ease, box-shadow 0.4s ease, border 0.4s ease;
+        position: relative;
+        border: 2px solid transparent;
+        overflow: hidden;
+      }
+
+      .pricing-card:hover {
+        transform: translateY(-12px) scale(1.05);
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+        border: 2px solid var(--primary-color);
+      }
+
+      .pricing-card:nth-child(3) {
+        background: linear-gradient(135deg, var(--card-bg) 0%, #e6f0fa 100%);
+        border: 2px solid var(--primary-color);
+        animation: gradientShift 6s ease infinite;
+      }
+
+      .pricing-card:nth-child(4) {
+        background: linear-gradient(135deg, var(--card-bg) 0%, #dbeafe 100%);
+        border: 2px solid var(--secondary-color);
+        box-shadow: var(--glow);
+        transform: scale(1.05);
+        animation: gradientShift 4s ease infinite;
+      }
+
+      @keyframes gradientShift {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
+      .pricing-card:nth-child(4)::before {
+        content: "Khuyên dùng";
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--secondary-color);
+        color: var(--card-bg);
+        padding: 0.5rem 1.5rem;
+        border-radius: 15px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        animation: pulse 1.5s infinite;
+      }
+
+      .pricing-card:nth-child(4):hover {
+        transform: translateY(-15px) scale(1.1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), var(--glow);
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+        }
+        70% {
+          transform: scale(1.1);
+          box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+        }
+      }
+
+      .pricing-card h3 {
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+      }
+
+      .pricing-card .description {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+        line-height: 1.5;
+      }
+
+      .pricing-card .price {
+        font-size: 2.3rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 1.2rem;
+      }
+
+      .pricing-card:nth-child(4) .price {
+        color: var(--secondary-color);
+      }
+
+      .pricing-card ul {
+        list-style: none;
+        margin-bottom: 1.5rem;
+        text-align: left;
+      }
+
+      .pricing-card ul li {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.8rem;
+        padding-left: 2rem;
+        position: relative;
+      }
+
+      .pricing-card .btn {
+        background: var(--primary-color);
+        color: var(--card-bg);
+        padding: 0.8rem 2rem;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: background 0.3s ease, transform 0.3s ease,
+          box-shadow 0.3s ease;
+        display: inline-block;
+      }
+
+      .pricing-card .btn:hover {
+        background: var(--secondary-color);
+        transform: translateY(-4px);
+        box-shadow: var(--glow);
+      }
+
+      .pricing-card:nth-child(4) .btn {
+        background: var(--secondary-color);
+      }
+
+      .pricing-card:nth-child(4) .btn:hover {
+        background: #1e40af;
+      }
+
+      .popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        background: linear-gradient(135deg, var(--card-bg) 0%, #f1f5f9 100%);
+        padding: 2.5rem;
+        border-radius: 25px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        animation: popupShow 0.4s ease forwards;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+      }
+
+      .popup.active {
+        display: block;
+      }
+
+      @keyframes popupShow {
+        to {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .popup h4 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.8rem;
+      }
+
+      .popup .price {
+        font-size: 1.6rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+      }
+
+      .popup p.description {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+      }
+
+      .popup ul {
+        list-style: none;
+        margin-bottom: 2rem;
+        text-align: left;
+      }
+
+      .popup ul li {
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        margin-bottom: 0.9rem;
+        padding-left: 2.2rem;
+        position: relative;
+      }
+
+      .popup a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        color: var(--card-bg);
+        background: var(--primary-color);
+        padding: 0.9rem 2rem;
+        border-radius: 15px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        transition: background 0.3s ease, transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .popup a:hover {
+        background: var(--secondary-color);
+        transform: translateY(-3px);
+        box-shadow: var(--glow);
+      }
+
+      .popup a i {
+        font-size: 1.2rem;
+      }
+
+      .popup .close-btn {
+        background: var(--secondary-color);
+        color: var(--card-bg);
+        padding: 0.8rem 2.5rem;
+        border: none;
+        border-radius: 15px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: background 0.3s ease, transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .popup .close-btn:hover {
+        background: #1e40af;
+        transform: translateY(-3px);
+        box-shadow: var(--glow);
+      }
+
+      .footer {
+        background: var(--card-bg);
+        padding: 3rem 1rem;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .footer-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+      }
+
+      .footer h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+      }
+
+      .footer ul {
+        list-style: none;
+      }
+
+      .footer ul li {
+        margin-bottom: 0.6rem;
+      }
+
+      .footer ul a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.3s;
+      }
+
+      .footer ul a:hover {
+        color: var(--primary-color);
+      }
+
+      .footer .social-links a {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .footer .social-links i {
+        font-size: 1.1rem;
+      }
+
+      .footer .copyright {
+        text-align: center;
+        margin-top: 2rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+      }
+
+      .header-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .header-user-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        border-radius: 50%;
+        transition: background-color 0.3s ease;
+      }
+
+      .header-user-btn:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .header-user-btn img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+      }
+
+      .user-dropdown {
+        position: fixed;
+        top: 60px;
+        left: calc(var(--sidebar-collapsed-width) + 10px);
+        background: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+        width: 280px;
+        z-index: 1002;
+        display: none;
+        animation: slideDown 0.3s ease;
+      }
+
+      .sidebar.expanded ~ .user-dropdown {
+        left: calc(var(--sidebar-width) + 10px);
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px) translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) translateX(0);
+        }
+      }
+
+      .user-dropdown.active {
+        display: block;
+      }
+
+      @media (max-width: 768px) {
+        .user-dropdown {
+          left: 10px;
+          right: 10px;
+          width: auto;
+          top: 70px;
+        }
+        .sidebar.expanded ~ .user-dropdown {
+          left: 10px;
+          right: 10px;
+        }
+
+        .pricing-section h2 {
+          font-size: 2.5rem;
+        }
+
+        .pricing-section p.subtitle {
+          font-size: 1rem;
+        }
+
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+        }
+
+        .pricing-card {
+          max-width: 100%;
+          padding: 1.8rem;
+        }
+
+        .pricing-card h3 {
+          font-size: 1.5rem;
+        }
+
+        .pricing-card .price {
+          font-size: 2rem;
+        }
+
+        .pricing-card ul li {
+          font-size: 0.9rem;
+        }
+
+        .pricing-card .btn {
+          padding: 0.7rem 1.8rem;
+          font-size: 0.9rem;
+        }
+
+        .popup {
+          padding: 2rem;
+          max-width: 95%;
+        }
+
+        .popup h4 {
+          font-size: 1.8rem;
+        }
+
+        .popup .price {
+          font-size: 1.4rem;
+        }
+
+        .popup p.description {
+          font-size: 0.95rem;
+        }
+
+        .popup ul li {
+          font-size: 0.9rem;
+        }
+
+        .popup a,
+        .popup .close-btn {
+          padding: 0.8rem 1.8rem;
+          font-size: 0.95rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hero {
+          grid-template-columns: 1fr;
+          text-align: center;
+          margin: 2rem auto;
+          gap: 1.5rem;
+        }
+
+        .hero-text h1 {
+          font-size: 1.5rem;
+        }
+
+        .hero-text p {
+          font-size: 1rem;
+          max-width: 100%;
+        }
+
+        .hero-buttons {
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .btn {
+          padding: 0.5rem 1.2rem;
+          font-size: 0.85rem;
+        }
+
+        .vocab-trial {
+          max-width: 100%;
+          padding: 0.8rem;
+        }
+
+        .vocab-trial input {
+          width: 55%;
+        }
+
+        .section {
+          margin: 3rem auto;
+        }
+
+        .section h2 {
+          font-size: 1.8rem;
+        }
+
+        .section p.subtitle {
+          font-size: 0.9rem;
+        }
+
+        .features-grid,
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .feature-card,
+        .roadmap-item,
+        .testimonial-card {
+          padding: 1.2rem;
+        }
+
+        .roadmap-item::before {
+          top: 15px;
+          left: -10px;
+          width: 15px;
+          height: 15px;
+        }
+
+        .pricing-section h2 {
+          font-size: 2rem;
+        }
+
+        .pricing-section p.subtitle {
+          font-size: 0.9rem;
+        }
+
+        .pricing-card {
+          padding: 1.5rem;
+        }
+
+        .pricing-card h3 {
+          font-size: 1.3rem;
+        }
+
+        .pricing-card .description {
+          font-size: 0.85rem;
+        }
+
+        .pricing-card .price {
+          font-size: 1.8rem;
+        }
+
+        .pricing-card ul li {
+          font-size: 0.85rem;
+          padding-left: 1.8rem;
+        }
+
+        .pricing-card .btn {
+          padding: 0.6rem 1.5rem;
+          font-size: 0.85rem;
+        }
+
+        .popup {
+          padding: 1.5rem;
+        }
+
+        .popup h4 {
+          font-size: 1.6rem;
+        }
+
+        .popup .price {
+          font-size: 1.3rem;
+        }
+
+        .popup p.description {
+          font-size: 0.9rem;
+        }
+
+        .popup ul li {
+          font-size: 0.85rem;
+        }
+
+        .popup a,
+        .popup .close-btn {
+          padding: 0.7rem 1.5rem;
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="overlay"></div>
+    <div class="mobile-header">
+      <div class="logo">
+        <img src="Remove-bg.ai_1734260849847.png" alt="Smart Lex Logo" />
+        <span class="logo-text">Smart Lex</span>
+      </div>
+      <div class="header-controls">
+        <button class="header-user-btn" id="headerUserBtn">
+          <img
+            id="headerUserAvatar"
+            src="https://placehold.co/32x32"
+            alt="User Avatar"
+          />
+        </button>
+        <button class="toggle-btn">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+    <div class="user-dropdown" id="userDropdown">
+      <div class="user-dropdown-header">
+        <img
+          id="dropdownUserAvatar"
+          src="https://placehold.co/40x40"
+          alt="User Avatar"
+        />
+        <div class="user-dropdown-header-info">
+          <h4 id="dropdownUserName">Tên người dùng</h4>
+          <p id="dropdownUserEmail">email@example.com</p>
+        </div>
+      </div>
+      <div class="user-dropdown-menu">
+        <a
+          href="https://facebook.com"
+          target="_blank"
+          class="user-dropdown-item"
+        >
+          <i class="fas fa-question-circle"></i>
+          <span>Trợ giúp</span>
+        </a>
+        <div class="user-dropdown-item" id="dropdownLogoutButton">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Đăng xuất</span>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="logo">
+        <img src="Remove-bg.ai_1734260849847.png" alt="Smart Lex Logo" />
+        <span class="logo-text">Smart Lex</span>
+      </div>
+      <nav class="sidebar-menu">
+        <a href="./main/vocabulary.html"
+          ><i class="fas fa-cogs"></i><span>tạo kho từ vựng </span></a
+        >
+        <a href="./tuhoc.html"
+          ><i class="fas fa-road"></i><span>Lộ trình học có sẵn</span></a
+        >
+        <a href="#features"><i class="fas fa-star"></i><span>Feature</span></a>
+        <a href="#progress"
+          ><i class="fas fa-chart-bar"></i><span>Tiến độ</span></a
+        >
+        <a href="#testimonials"
+          ><i class="fas fa-comments"></i><span>Đánh giá</span></a
+        >
+        <div class="sidebar-cta" id="signUpButton">
+          <i class="fas fa-user-plus"></i><span>Đăng ký</span>
+        </div>
+        <div class="sidebar-cta" id="signInButton">
+          <i class="fas fa-sign-in-alt"></i><span>Đăng nhập</span>
+        </div>
+        <div class="user-info" id="userInfo">
+          <img id="userAvatar" src="" alt="User Avatar" />
+          <span id="userName"></span>
+          <div class="user-progress" id="userProgress"></div>
+          <div class="custom-data-section">
+            <input
+              type="text"
+              id="customInput"
+              placeholder="Nhập thông tin..."
+            />
+            <button id="addCustomButton">Thêm</button>
+            <ul id="customDataList"></ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <h1>
+            Khám Phá Thế Giới Từ Vựng<br />với
+            <span style="color: var(--primary-color)">Smart Lex</span>
+          </h1>
+          <p>
+            Biến từ vựng thành sức mạnh của bạn với công nghệ AI tiên tiến, trò
+            chơi học tập sáng tạo, và lộ trình được thiết kế riêng.
+          </p>
+          <div class="hero-buttons">
+            <a href="#" class="btn btn-primary">Hướng dẫn dùng</a>
+            <a href="#features" class="btn btn-secondary">Xem tính năng</a>
+          </div>
+        </div>
+        <div class="hero-image">
+          <img src="https://placehold.co/600x400" alt="Khám phá Smart Lex" />
+        </div>
+      </section>
+      <section class="section" id="features">
+        <h2>Tính năng nổi bật</h2>
+        <p class="subtitle">
+          Công cụ hiện đại giúp bạn học từ vựng nhanh chóng và hiệu quả.
+        </p>
+        <div class="features-grid">
+          <div class="feature-card">
+            <i class="fas fa-brain"></i>
+            <h3>Trí tuệ nhân tạo AI Unier</h3>
+            <p>Người bạn đồng hành trong mọi quá trình học tập</p>
+          </div>
+          <div class="feature-card">
+            <i class="fas fa-book"></i>
+            <h3>10.000+ từ vựng có sẵn</h3>
+            <p>Kho từ vựng từ A1 đến C2, đa dạng chủ đề.</p>
+          </div>
+          <div class="feature-card">
+            <i class="fas fa-gamepad"></i>
+            <h3>Trò chơi học tập</h3>
+            <p>Ghi nhớ từ vựng qua mini-game thú vị.</p>
+          </div>
+
+          <div class="feature-card">
+            <i class="fas fa-sync"></i>
+            <h3>Spaced Repetition</h3>
+            <p>Ghi nhớ lâu dài với lặp lại ngắt quãng.</p>
+          </div>
+        </div>
+      </section>
+      <section class="section" id="roadmap">
+        <h2>Lộ trình học tập</h2>
+        <p class="subtitle">Từ zero đến hero với lộ trình khoa học.</p>
+        <div class="roadmap-grid">
+          <div class="roadmap-item">
+            <h3>1. Khởi động (A1-A2)</h3>
+            <p>Học 300 từ cơ bản qua flashcard và nghe.</p>
+          </div>
+          <div class="roadmap-item">
+            <h3>2. Nền tảng (B1)</h3>
+            <p>Mở rộng 1000 từ qua câu chuyện và hội thoại.</p>
+          </div>
+          <div class="roadmap-item">
+            <h3>3. Chuyên sâu (B2)</h3>
+            <p>Học từ vựng IELTS/TOEIC, luyện giao tiếp.</p>
+          </div>
+          <div class="roadmap-item">
+            <h3>4. Thành thạo (C1-C2)</h3>
+            <p>Thành thạo 5000+ từ nâng cao.</p>
+          </div>
+        </div>
+      </section>
+      <section class="section" id="progress">
+        <h2>Theo dõi tiến độ</h2>
+        <p class="subtitle">Xem tiến bộ qua biểu đồ và nhận gợi ý từ AI.</p>
+        <div class="progress-demo">
+          <p>Theo dõi số từ đã học và mức độ thành thạo.</p>
+          <img src="https://placehold.co/800x400" alt="Progress Chart Demo" />
+        </div>
+      </section>
+      <section class="section" id="testimonials">
+        <h2>Mục đích chúng tôi đem lại là gì?</h2>
+        <p class="subtitle">Hàng nghìn học viên đã cải thiện từ vựng.</p>
+        <div class="testimonials-grid">
+          <div class="testimonial-card">
+            <p>
+              "Smart Lex đã giúp tôi cải thiện từ vựng đáng kể, rất dễ sử dụng!"
+            </p>
+            <h4>Nguyễn Thị Thuỷ - Giáo viên</h4>
+          </div>
+          <div class="testimonial-card">
+            <p>"Tôi học được 500 từ chỉ trong 1 tháng, thật tuyệt vời!"</p>
+            <h4>Đào Trung Hiếu - Học sinh</h4>
+          </div>
+          <div class="testimonial-card">
+            <p>"Mini-game rất thú vị, giúp tôi nhớ từ lâu hơn."</p>
+            <h4>Nguyễn Tuấn Minh - Học sinh</h4>
+          </div>
+          <div class="testimonial-card">
+            <p>"Lộ trình học rất khoa học, phù hợp với người bận rộn."</p>
+            <h4>Nguyễn Quỳnh Anh - Học sinh</h4>
+          </div>
+          <div class="testimonial-card">
+            <p>"Hỗ trợ AI thật sự thông minh, như có gia sư riêng!"</p>
+            <h4>Phan Đâm Đâm - Học sinh</h4>
+          </div>
+          <div class="testimonial-card">
+            <p>"Tôi đã tự tin hơn khi giao tiếp nhờ Smart Lex."</p>
+            <h4>Ngô Tuấn Hùng - Học sinh</h4>
+          </div>
+        </div>
+      </section>
+      <section class="pricing-section">
+        <h2>Chọn gói học của bạn</h2>
+        <p class="subtitle">
+          Tăng tốc hành trình học từ vựng với các gói phù hợp từ Smart Lex.
+        </p>
+        <div class="pricing-grid">
+          <div class="pricing-card" data-plan="free">
+            <h3>Gói miễn phí</h3>
+            <p class="description">Khởi đầu miễn phí</p>
+            <div class="price">0 VNĐ</div>
+            <ul>
+              <li>500</li>
+              <li>Flashcard cơ bản</li>
+              <li>Lộ trình mẫu (1 tháng)</li>
+            </ul>
+            <a href="#" class="btn btn-primary details-btn">Xem chi tiết</a>
+          </div>
+          <div class="pricing-card" data-plan="basic">
+            <h3>Gói cơ bản</h3>
+            <p class="description">Học hiệu quả với chi phí thấp</p>
+            <div class="price">99.000 VNĐ/tháng</div>
+            <ul>
+              <li>Truy cập 1.500 từ vựng (A1-A2)</li>
+              <li>Flashcard và mini-game cơ bản</li>
+              <li>Lộ trình cá nhân hóa (1 tháng)</li>
+            </ul>
+            <a href="#" class="btn btn-primary details-btn">Xem chi tiết</a>
+          </div>
+          <div class="pricing-card" data-plan="pro">
+            <h3>Gói Pro</h3>
+            <p class="description">Nâng cao với lộ trình riêng</p>
+            <div class="price">199.000 VNĐ/tháng</div>
+            <ul>
+              <li>Truy cập 5.000 từ vựng</li>
+              <li>Mini-game</li>
+              <li class="highlight">Tặng bộ từ vựng chuyên dụng trong IELTS</li>
+            </ul>
+            <a href="#" class="btn btn-primary details-btn">Xem chi tiết</a>
+          </div>
+          <div class="pricing-card" data-plan="premium">
+            <h3>Gói Premium</h3>
+            <p class="description">Mở khóa toàn bộ tính năng</p>
+            <div class="price">499.000 VNĐ/tháng</div>
+            <ul>
+              <li class="highlight">truy cập mọi chức năng</li>
+              <li class="highlight">
+                Hỗ trợ giải bài tập trực tiếp cùng giáo viên
+              </li>
+            </ul>
+            <a href="#" class="btn btn-primary details-btn">Xem chi tiết</a>
+          </div>
+        </div>
+      </section>
+      <div class="popup" id="pricingPopup">
+        <h4 id="popupTitle">Thông tin gói</h4>
+        <p class="price" id="popupPrice"></p>
+        <p class="description" id="popupDescription"></p>
+        <ul id="popupFeatures"></ul>
+        <a href="https://www.google.com" target="_blank">
+          <i class="fab fa-facebook-f"></i>
+          Liên hệ qua Facebook
+        </a>
+        <button class="close-btn" id="closePopup">Đóng</button>
+      </div>
+    </main>
+    <footer class="footer">
+      <div class="footer-container">
+        <div>
+          <h3>Smart Lex</h3>
+          <ul>
+            <li><a href="#!">Giới thiệu</a></li>
+            <li><a href="#!">Đội ngũ</a></li>
+            <li><a href="#!">Hỗ trợ</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Danh mục học</h3>
+          <ul>
+            <li><a href="#!">Sáng tạo kho từ của riêng bạn</a></li>
+            <li><a href="#!">Học theo lộ trình có sẵn</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Kết nối</h3>
+          <ul class="social-links">
+            <li>
+              <a href="#!"><i class="fab fa-tiktok"></i> Tiktok</a>
+            </li>
+            <li>
+              <a href="#!"><i class="fab fa-facebook-f"></i> Facebook</a>
+            </li>
+            <li>
+              <a href="#!"><i class="fab fa-instagram"></i> Instagram</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright">© 2025 Smart Lex. All rights reserved.</div>
+    </footer>
+    <script type="module" src="./firebase.js"></script>
+    <script type="module">
+      function initializeSidebar() {
+        const sidebar = document.querySelector(".sidebar");
+        const toggleBtn = document.querySelector(".toggle-btn");
+        const overlay = document.querySelector(".overlay");
+        function toggleSidebar() {
+          sidebar.classList.toggle("expanded");
+          if (sidebar.classList.contains("expanded")) {
+            overlay.style.display = "block";
+            setTimeout(() => {
+              overlay.style.opacity = "1";
+            }, 10);
+          } else {
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+              overlay.style.display = "none";
+            }, 300);
+          }
+        }
+        toggleBtn.addEventListener("click", toggleSidebar);
+        overlay.addEventListener("click", () => {
+          sidebar.classList.remove("expanded");
+          document.getElementById("pricingPopup").classList.remove("active");
+          overlay.style.opacity = "0";
+          setTimeout(() => {
+            overlay.style.display = "none";
+          }, 300);
+        });
+        window.addEventListener("resize", () => {
+          if (
+            window.innerWidth > 768 &&
+            sidebar.classList.contains("expanded")
+          ) {
+            sidebar.classList.remove("expanded");
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+              overlay.style.display = "none";
+            }, 300);
+          }
+        });
+      }
+      import {
+        auth,
+        onUserStateChanged,
+        addCustomData,
+        listenToUserData,
+        signInWithGoogle,
+        signUpWithGoogle,
+        logout,
+      } from "./firebase.js";
+      initializeSidebar();
+      function displayCustomData(dataList) {
+        const customDataList = document.getElementById("customDataList");
+        customDataList.innerHTML = "";
+        dataList.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          customDataList.appendChild(li);
+        });
+      }
+      onUserStateChanged((user) => {
+        const signInButton = document.getElementById("signInButton");
+        const signUpButton = document.getElementById("signUpButton");
+        const userInfo = document.getElementById("userInfo");
+        const userAvatar = document.getElementById("userAvatar");
+        const userName = document.getElementById("userName");
+        const userProgress = document.getElementById("userProgress");
+        const headerUserBtn = document.getElementById("headerUserBtn");
+        const headerUserAvatar = document.getElementById("headerUserAvatar");
+        const dropdownUserAvatar =
+          document.getElementById("dropdownUserAvatar");
+        const dropdownUserName = document.getElementById("dropdownUserName");
+        const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+        if (user) {
+          signInButton.style.display = "none";
+          signUpButton.style.display = "none";
+          userInfo.style.display = "flex";
+          userAvatar.src = user.photoURL || "https://placehold.co/28x28";
+          userName.textContent = user.displayName || "Người dùng";
+          headerUserBtn.style.display = "flex";
+          headerUserAvatar.src = user.photoURL || "https://placehold.co/32x32";
+          dropdownUserAvatar.src =
+            user.photoURL || "https://placehold.co/40x40";
+          dropdownUserName.textContent = user.displayName || "Người dùng";
+          dropdownUserEmail.textContent = user.email || "email@example.com";
+          listenToUserData(user.uid, (data) => {
+            userProgress.textContent = `Dữ liệu: ${
+              data.customData ? data.customData.length : 0
+            } mục`;
+            displayCustomData(data.customData || []);
+          });
+        } else {
+          signInButton.style.display = "flex";
+          signUpButton.style.display = "flex";
+          userInfo.style.display = "none";
+          userProgress.textContent = "";
+          customDataList.innerHTML = "";
+          headerUserBtn.style.display = "none";
+          userDropdown.classList.remove("active");
+        }
+      });
+      document
+        .getElementById("signInButton")
+        .addEventListener("click", signInWithGoogle);
+      document
+        .getElementById("signUpButton")
+        .addEventListener("click", signUpWithGoogle);
+      document
+        .getElementById("dropdownLogoutButton")
+        .addEventListener("click", logout);
+      document
+        .getElementById("addCustomButton")
+        .addEventListener("click", async () => {
+          const user = auth.currentUser;
+          const newData = document.getElementById("customInput").value.trim();
+          if (user && newData) {
+            await addCustomData(user, newData);
+            document.getElementById("customInput").value = "";
+          } else {
+            alert("Vui lòng đăng nhập và nhập dữ liệu!");
+          }
+        });
+      document.getElementById("headerUserBtn").addEventListener("click", () => {
+        const userDropdown = document.getElementById("userDropdown");
+        userDropdown.classList.toggle("active");
+      });
+      const plans = {
+        free: {
+          title: "Gói Miễn Phí",
+          description: "Khởi đầu hành trình học từ vựng hoàn toàn miễn phí",
+          price: "0 VNĐ",
+          features: [
+            { text: "2000 từ vựng", highlight: false },
+            { text: "Flashcard cơ bản", highlight: false },
+            { text: "Lộ trình mẫu (1 tháng)", highlight: false },
+            { text: "giới hạn hỏi đáp AI cơ bản", highlight: false },
+          ],
+        },
+        basic: {
+          title: "Gói Cơ Bản",
+          description: "Tăng tốc học từ vựng với chi phí hợp lý",
+          price: "99.000 VNĐ/tháng",
+          features: [
+            { text: "Truy cập 3000 từ vựng", highlight: false },
+            { text: "Flashcard và mini-game cơ bản", highlight: false },
+            { text: "Lộ trình cá nhân hóa (1 tháng)", highlight: false },
+            { text: "Hỗ trợ AI cơ bản ", highlight: false },
+          ],
+        },
+        pro: {
+          title: "Gói Pro",
+          description: "Trải nghiệm học nâng cao với lộ trình cá nhân hóa",
+          price: "199.000 VNĐ/tháng",
+          features: [
+            { text: "Truy cập 5.000 từ vựng ", highlight: false },
+            { text: "Mini-game  ", highlight: false },
+            { text: "Lộ trình cá nhân hóa trong 3 tháng", highlight: false },
+            { text: "Hỗ trợ AI ưu tiên", highlight: false },
+            { text: "Theo dõi tiến độ chi tiết", highlight: false },
+            {
+              text: "Tặng bộ từ vựng chuyên dụng trong IELTS ",
+              highlight: true,
+            },
+            {
+              text: "Tích hợp AI Unier chuyên sâu vào mọi chức năng trong quá trình học ",
+              highlight: true,
+            },
+            {
+              text: "Mở khoá chế độ học đasàà ",
+              highlight: true,
+            },
+          ],
+        },
+        premium: {
+          title: "Gói Premium",
+          description: "Mở khóa toàn bộ tính năng với hỗ trợ ưu tiên",
+          price: "499.000 VNĐ/tháng",
+          features: [
+            { text: "Truy cập tất cả từ vựng", highlight: false },
+            {
+              text: " Mở khoá toàn bộ trò chơi ",
+              highlight: false,
+            },
+            {
+              text: "Trải nghiệm trí AI Unier đước training tư duy giải đáp ",
+              highlight: false,
+            },
+            { text: "Đưa ra lộ trình học từ vựng chi tiết", highlight: false },
+            {
+              text: "Hỗ trợ giải đáp thắc mắc cùng giáo viên",
+              highlight: true,
+            },
+            {
+              text: "Tích hợp AI Unier chuyên sâu vào mọi chức năng trong quá trình học ",
+              highlight: true,
+            },
+            {
+              text: "Tặng bộ từ vựng chuyên dụng trong IELTS",
+              highlight: true,
+            },
+            { text: "Tự  training AI của riêng mình", highlight: true },
+          ],
+        },
+      };
+      document.querySelectorAll(".details-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const plan = btn.closest(".pricing-card").dataset.plan;
+          const planData = plans[plan];
+          document.getElementById("popupTitle").textContent = planData.title;
+          document.getElementById("popupPrice").textContent = planData.price;
+          document.getElementById("popupDescription").textContent =
+            planData.description;
+          const featuresList = document.getElementById("popupFeatures");
+          featuresList.innerHTML = "";
+          planData.features.forEach((feature) => {
+            const li = document.createElement("li");
+            li.textContent = feature.text;
+            if (feature.highlight) {
+              li.classList.add("highlight");
+            }
+            featuresList.appendChild(li);
+          });
+          document.getElementById("pricingPopup").classList.add("active");
+          document.getElementById("overlay").classList.add("active");
+        });
+      });
+      document.getElementById("closePopup").addEventListener("click", () => {
+        document.getElementById("pricingPopup").classList.remove("active");
+        document.getElementById("overlay").classList.remove("active");
+      });
+    </script>
+  </body>
+</html>
